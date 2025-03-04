@@ -1,8 +1,8 @@
 
 
-from graphCut_image_segmentation.graph_cut.display import show_segmentation
+from graph_cut.display import show_segmentation
 import numpy as np
-from graphCut_image_segmentation.graph_cut.energy import compute_energy
+from graph_cut.energy import compute_energy
 import maxflow
 
 # Alpha-Expansion Graph Cut using PyMaxflow
@@ -63,9 +63,7 @@ def alpha_expansion(image,unary, pairwise, K, method='kmeans', max_iterations=20
             graph.maxflow()
             
             # Update labels
-            print("whole graph:",graph.get_grid_segments(nodes))
-            print("whole graph:",graph.get_grid_segments(nodes).sum())
-            print("len of nodes",len(nodes))
+
 
             nv_labels=labels.copy()
             for i in range(h):
