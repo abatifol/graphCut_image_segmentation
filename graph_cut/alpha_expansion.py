@@ -43,7 +43,7 @@ def alpha_expansion1(image,unary, pairwise, K, method='kmeans', max_iterations=2
                             graph.add_edge(nodes[pixel_index], aux_node, weight_down, weight_down)
                             graph.add_edge(nodes[neighbor_index_down], aux_node, pairwise[i+1,j,labels[i+1,j],alpha], pairwise[i+1,j,labels[i+1,j],alpha])
                         
-                            graph.add_tedge(aux_node, 0, weight_down)
+                            graph.add_tedge(aux_node, 0, pairwise[i,j,labels[i,j],labels[i+1,j]])
 
                         else:
                             graph.add_edge(nodes[pixel_index], nodes[neighbor_index_down], weight_down, weight_down)
@@ -55,7 +55,7 @@ def alpha_expansion1(image,unary, pairwise, K, method='kmeans', max_iterations=2
                             aux_node = graph.add_nodes(1)
                             graph.add_edge(nodes[pixel_index], aux_node, weight_right, weight_right)
                             graph.add_edge(nodes[neighbor_index_right],aux_node, pairwise[i,j+1,labels[i,j+1],alpha], pairwise[i,j+1,labels[i,j+1],alpha])
-                            graph.add_tedge(aux_node, 0, weight_right)
+                            graph.add_tedge(aux_node, 0, pairwise[i,j,labels[i,j],labels[i,j+1]])
                         else:
                             graph.add_edge(nodes[pixel_index], nodes[neighbor_index_right], weight_right, weight_right)
 
@@ -133,7 +133,7 @@ class Alpha_expansion2:
                         graph.add_edge(nodes[pixel_index], aux_node, weight_down, weight_down)
                         graph.add_edge(nodes[neighbor_index_down], aux_node, pairwise[i+1,j,labels[i+1,j],alpha], pairwise[i+1,j,labels[i+1,j],alpha])
                     
-                        graph.add_tedge(aux_node, 0, weight_down)
+                        graph.add_tedge(aux_node, 0,  pairwise[i,j,labels[i,j],labels[i+1,j]])
 
                     else:
                         graph.add_edge(nodes[pixel_index], nodes[neighbor_index_down], weight_down, weight_down)
@@ -145,7 +145,7 @@ class Alpha_expansion2:
                         aux_node = graph.add_nodes(1)
                         graph.add_edge(nodes[pixel_index], aux_node, weight_right, weight_right)
                         graph.add_edge(nodes[neighbor_index_right],aux_node, pairwise[i,j+1,labels[i,j+1],alpha], pairwise[i,j+1,labels[i,j+1],alpha])
-                        graph.add_tedge(aux_node, 0, weight_right)
+                        graph.add_tedge(aux_node, 0,  pairwise[i,j,labels[i,j],labels[i,j+1]])
                     else:
                         graph.add_edge(nodes[pixel_index], nodes[neighbor_index_right], weight_right, weight_right)
         return graph,nodes
