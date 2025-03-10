@@ -42,5 +42,11 @@ def initialize_labels_bis(image, K, method='kmeans'):
         raise ValueError(f"Unknown initialization method: {method}")
 
 
+import numpy as np
 
-
+def get_dominant_colors(labels, image, K):
+    dominant_colors = np.zeros((K, 3))
+    for k in range(K):
+        mask = (labels == k)
+        dominant_colors[k] = np.mean(image[mask], axis=0)
+    return dominant_colors

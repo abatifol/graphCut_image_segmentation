@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from math import floor
 from typing import List
 
+from typing import Union, Tuple, List, Dict
 
 def resize_mask_and_img(mask, img, scale_factor=0.5):
     w, h, _ = img.shape
@@ -37,6 +38,7 @@ class SegmentationDataset:
     def prepare_dataset(self):
         for sample in self.dataset.iter_samples():
             # Load image and convert to RGB
+            
             img = cv2.cvtColor(cv2.imread(sample.filepath), cv2.COLOR_BGR2RGB)
 
             # Extract labels and annotations and define unique colors if it does not exist already
@@ -99,6 +101,37 @@ class SegmentationDataset:
 
     def __len__(self):
         return len(self.dataset)
+    def get_segmentation_mask(
+        self, image: np.ndarray, annotations: List[Dict], n_labels: int,COLORS
+    ) -> np.ndarray:
+        """
+
+        :param image: np.ndarray (current image)
+        :param annotations: dictionary of annotations (from COCO dataset)
+        It namely contains the segmentation mask and the bounding boxes
+        to locate the mask on the full image
+        :param n_labels: number of labels in the image
+        :return: Segmentation mask
+        """
+        height, width, _ = image.shape
+        mask = np.zeros((height, width, 3))
+        for annotation in annotations:
+            bounding_box = annotation["bounding_box"]
+            x_1, y_1, bb_width, bb_height = bounding_box
+            x_1 = floor(x_1 * width)
+            y_1 = floor(y_1 * height)
+
+            current_mask = np.array(annotation["mask"], dtype=np.int32).T
+            current_mask = current_mask[:, :, np.newaxis].repeat(3, 2)
+            x_2 = current_mask.shape[0] + x_1
+            y_2 = current_mask.shape[1] + y_1
+            if n_labels == 1:
+                mask_color = COLORS[0]
+            else:
+                mask_color = COLORS[self.segmentation_labels[annotation["label"]]]
+            current_mask = current_mask * mask_color
+            mask[y_1:y_2, x_1:x_2, :] = np.swapaxes(current_mask, 0, 1)
+        return mask
 
     def __getitem__(self, idx):
         return self.images[idx], self.masks[idx], self.labels_in_img[idx]
