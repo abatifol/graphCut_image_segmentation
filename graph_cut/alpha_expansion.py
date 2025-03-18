@@ -73,7 +73,7 @@ def alpha_expansion1(image,unary, pairwise, K, method='kmeans', max_iterations=2
                     if graph.get_segment(nodes[pixel_index]) == 1:
                         nv_labels[i, j] = alpha  # Expand α-region
             nv_energy=compute_energy(nv_labels,unary,pairwise)
-            print("computed energy",nv_energy,"is it greater than initial energy?",nv_energy>energy)
+            print("computed energy",nv_energy,"will we swap labels?",nv_energy<energy)
             if nv_energy<energy:
                 labels=nv_labels
                 energy=nv_energy

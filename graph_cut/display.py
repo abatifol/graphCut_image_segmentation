@@ -28,3 +28,13 @@ def show_segmentation(image, labels, K=3,title=""):
     plt.suptitle(title)
     plt.show()
 
+from graph_cut.utils import get_dominant_colors
+def show_dominant_colors(labels,image,K=3,title="Dominant Colors"):
+    dominant_colors=get_dominant_colors(labels,image,K)
+    K=dominant_colors.shape[0]
+    # plt.subplot(1,K,2)
+    plt.imshow(dominant_colors.astype(np.uint8).reshape(1, K, 3))
+    # add in the x labels the corresponding integers
+    plt.xticks(np.arange(K), np.arange(K))
+    plt.title(title)
+    plt.show()
