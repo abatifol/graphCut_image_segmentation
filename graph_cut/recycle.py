@@ -41,19 +41,15 @@ def binary_recycle(pairwise_term, K):
 
 
 from graph_cut.display import show_segmentation
+from graph_cut.base_algorithm import Runner
 
-
-class Recycle:
+class Recycle(Runner):
     # to remove the self.assigned labels , just remove the if condition in the construct graph
     def __init__(self, image, unary, pairwise, K):
+        super(Recycle, self).__init__(image, unary, pairwise, K)
         # self.l_energy=[]
-        self.unary = unary
-        self.pairwise = pairwise
-        self.K = K
-        self.h = image.shape[0]
-        self.w = image.shape[1]
-        self.epsilon = -1
-        self.assigned_labels = np.ones((self.h, self.w)) * self.epsilon
+   
+
         self.cst = 0  #! Cstant term in the energy
         # labels = np.argmin(unary, axis=2)  # Initialize labels using unary term
         # labels = initialize_labels_bis(image,method=method, K=K)
@@ -108,20 +104,27 @@ class Recycle:
                         )
         return graph, nodes
 
-    def run(self, image, init_assignments=None):
+    def run(self, image, init_labels=None,assigned_labels=None):
+        # init_labels is the initial labels for the image
+        
         h, w, _ = image.shape
         print("---start Projection---")
         # Unary/pairwise of the true graph
         unary = self.unary.copy()
         pairwise = self.pairwise
         K = self.K
-        if init_assignments is not None:
-            labels = init_assignments
+        if init_labels is not None:
+            print("you provided the initial labels")
+            labels = init_labels
         else:
-            labels = np.argmin(unary, axis=2)
+            labels = np.ones((h, w), dtype=np.int32) * self.epsilon
+        if assigned_labels is not None:
+            print("you provided the assigned labels")
+            self.assigned_labels = assigned_labels
+
         # project to int
         labels = labels.astype(np.int32)
-        show_segmentation(image, labels, title="initialization")
+        show_segmentation(image, labels, title="initialization of the Recycle algorithm")
         # energy=compute_energy(labels,unary,pairwise)
         assigned_labels = (
             self.assigned_labels
@@ -154,57 +157,9 @@ class Recycle:
         #     show_segmentation(image, labels, K)
 
     def project(self, labels, assigned_labels, unary_term, pairwise_term):
-        # Project the function Using the initial code.
-        # Slide the pairwise term and update the corresponding pairwise term
-        for i in range(self.h - 1):
-            for j in range(self.w - 1):
-                idx1 = []
-                idx2 = []
-                if i < self.h - 1:
-                    idx1.append((i, j))
-                    idx2.append((i + 1, j))
-                if j < self.w - 1:
-                    idx1.append((i, j))
-                    idx2.append((i, j + 1))
-                for l in range(len(idx1)):
-                    node = idx1[l]
-                    neighbor = idx2[l]
-                    # print("node",node,"neighbor",neighbor)
-
-                    if (
-                        assigned_labels[node] == self.epsilon
-                        and assigned_labels[neighbor] != self.epsilon
-                    ):
-                        for k in range(self.K):
-                            unary_term[node[0], node[1], k] += pairwise_term[
-                                node[0], node[1], k, labels[neighbor[0], neighbor[1]]
-                            ]
-                    elif (
-                        assigned_labels[node[0], node[1]] != self.epsilon
-                        and assigned_labels[neighbor[0], neighbor[1]] == self.epsilon
-                    ):
-                        for k in range(self.K):
-                            unary_term[neighbor[0], neighbor[1], k] += pairwise_term[
-                                node[0], node[1], labels[node[0], node[1]], k
-                            ]
-                    elif (
-                        assigned_labels[node[0], node[1]] != self.epsilon
-                        and assigned_labels[neighbor[0], neighbor[1]] != self.epsilon
-                    ):
-                        self.cst += pairwise_term[
-                            node[0],
-                            node[1],
-                            labels[node[0], node[1]],
-                            labels[neighbor[0], neighbor[1]],
-                        ]
-
-        # Update the pairwise term
-        for i in range(self.h):
-            for j in range(self.w):
-                if assigned_labels[i, j] != self.epsilon:
-                    self.cst += unary_term[i, j, labels[i, j]]
-        return unary_term, pairwise_term
-
+       return super(Recycle, self).project(
+            labels, assigned_labels, unary_term, pairwise_term
+        )
     def update_labels(self, graph, nodes, alpha, labels, assigned_labels):
         h, w = self.h, self.w
         nv_labels = labels.copy()
