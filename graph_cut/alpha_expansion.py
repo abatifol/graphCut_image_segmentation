@@ -126,16 +126,12 @@ def alpha_expansion1(
 
 
 import numpy as np
+from graph_cut.base_algorithm import Runner
 
-
-class Alpha_expansion2:
+class Alpha_expansion2(Runner):
     def __init__(self, image, unary, pairwise, K, max_iterations):
-        self.l_energy = []
-        self.unary = unary
-        self.pairwise = pairwise
-        self.K = K
-        self.h = image.shape[0]
-        self.w = image.shape[1]
+        super().__init__(image, unary, pairwise, K)
+
         self.max_iterations = max_iterations
         # labels = np.argmin(unary, axis=2)  # Initialize labels using unary term
         # labels = initialize_labels_bis(image,method=method, K=K)
@@ -153,6 +149,8 @@ class Alpha_expansion2:
             for j in range(w):
                 # Add unary terms
                 pixel_index = i * w + j
+                if self.assigned_labels[i,j]!=self.epsilon: # if the pixel is already assigned
+                    continue 
                 if labels[i, j] == alpha:
                     graph.add_tedge(
                         nodes[pixel_index], unary[i, j, alpha], np.inf
@@ -167,69 +165,76 @@ class Alpha_expansion2:
                 # Add pairwise terms
                 if i < h - 1:
                     neighbor_index_down = pixel_index + w
+                    if self.assigned_labels[i,j]==self.epsilon and self.assigned_labels[i+1,j]==self.epsilon: # if the pixel is already assigned
+                        weight_down = pairwise[i, j, labels[i, j], alpha]
 
-                    weight_down = pairwise[i, j, labels[i, j], alpha]
+                        if labels[i, j] != labels[i + 1, j]:
+                            aux_node = graph.add_nodes(1)
+                            graph.add_edge(
+                                nodes[pixel_index], aux_node, weight_down, weight_down
+                            )
+                            graph.add_edge(
+                                nodes[neighbor_index_down],
+                                aux_node,
+                                pairwise[i + 1, j, labels[i + 1, j], alpha],
+                                pairwise[i + 1, j, labels[i + 1, j], alpha],
+                            )
 
-                    if labels[i, j] != labels[i + 1, j]:
-                        aux_node = graph.add_nodes(1)
-                        graph.add_edge(
-                            nodes[pixel_index], aux_node, weight_down, weight_down
-                        )
-                        graph.add_edge(
-                            nodes[neighbor_index_down],
-                            aux_node,
-                            pairwise[i + 1, j, labels[i + 1, j], alpha],
-                            pairwise[i + 1, j, labels[i + 1, j], alpha],
-                        )
+                            graph.add_tedge(aux_node, 0, weight_down)
 
-                        graph.add_tedge(aux_node, 0, weight_down)
-
-                    else:
-                        graph.add_edge(
-                            nodes[pixel_index],
-                            nodes[neighbor_index_down],
-                            weight_down,
-                            weight_down,
-                        )
+                        else:
+                            graph.add_edge(
+                                nodes[pixel_index],
+                                nodes[neighbor_index_down],
+                                weight_down,
+                                weight_down,
+                            )
 
                 if j < w - 1:
-                    neighbor_index_right = pixel_index + 1
-                    weight_right = pairwise[i, j, labels[i, j], alpha]
-                    if labels[i, j] != labels[i, j + 1]:
-                        aux_node = graph.add_nodes(1)
-                        graph.add_edge(
-                            nodes[pixel_index], aux_node, weight_right, weight_right
-                        )
-                        graph.add_edge(
-                            nodes[neighbor_index_right],
-                            aux_node,
-                            pairwise[i, j + 1, labels[i, j + 1], alpha],
-                            pairwise[i, j + 1, labels[i, j + 1], alpha],
-                        )
-                        graph.add_tedge(aux_node, 0, weight_right)
-                    else:
-                        graph.add_edge(
-                            nodes[pixel_index],
-                            nodes[neighbor_index_right],
-                            weight_right,
-                            weight_right,
-                        )
+                    if self.assigned_labels[i,j]==self.epsilon and self.assigned_labels[i,j+1]==self.epsilon: # if the pixel is already assigned
+                        neighbor_index_right = pixel_index + 1
+                        weight_right = pairwise[i, j, labels[i, j], alpha]
+                        if labels[i, j] != labels[i, j + 1]:
+                            aux_node = graph.add_nodes(1)
+                            graph.add_edge(
+                                nodes[pixel_index], aux_node, weight_right, weight_right
+                            )
+                            graph.add_edge(
+                                nodes[neighbor_index_right],
+                                aux_node,
+                                pairwise[i, j + 1, labels[i, j + 1], alpha],
+                                pairwise[i, j + 1, labels[i, j + 1], alpha],
+                            )
+                            graph.add_tedge(aux_node, 0, weight_right)
+                        else:
+                            graph.add_edge(
+                                nodes[pixel_index],
+                                nodes[neighbor_index_right],
+                                weight_right,
+                                weight_right,
+                            )
         return graph, nodes
 
-    def run(self, image):
+    def run(self, image,assigned_labels=None,init_labels=None):
+        if assigned_labels is not None:
+            self.assigned_labels = assigned_labels
         h, w, _ = image.shape
         unary = self.unary
         pairwise = self.pairwise
         l_energy = self.l_energy
         K = self.K
         max_iterations = self.max_iterations
-        labels = np.argmin(unary, axis=2)
-        show_segmentation(image, labels, title="initialization")
-        energy = compute_energy(labels, unary, pairwise)
+        if init_labels is not None:
+            labels= init_labels
+        else:
+            labels = np.argmin(unary, axis=2)
+        show_segmentation(image, labels, title="initialization of the Alpha expansion")
+        energy = self.compute_energy(labels, unary, pairwise)
         l_energy.append(energy)
 
-        print("first energy", compute_energy(labels, unary, pairwise))
+        print("first energy", self.compute_energy(labels, unary, pairwise))
         for _ in range(max_iterations):
+            self.node_changed=False
             print(f"iterations nb: {_}")
             for alpha in range(K):
                 graph, nodes = self.construct_graph(alpha, labels)
@@ -240,7 +245,7 @@ class Alpha_expansion2:
                 # Update labels
 
                 nv_labels = self.update_labels(graph, nodes, alpha, labels)
-                nv_energy = compute_energy(nv_labels, unary, pairwise)
+                nv_energy = self.compute_energy(nv_labels, unary, pairwise)
                 print(
                     "computed energy",
                     nv_energy,
@@ -253,9 +258,12 @@ class Alpha_expansion2:
                     l_energy.append(energy)
 
                     show_segmentation(
-                        image, labels, K, title=f"iteration {_} alpha {alpha}"
+                        image, labels, K, title=f"Alpha_exp: iteration {_} alpha {alpha}"
                     )
-                    print("energy", compute_energy(labels, unary, pairwise))
+                    print("energy", self.compute_energy(labels, unary, pairwise))
+                if self.node_changed==False:
+                    print("no node have changed during the whole iteration, we stop here")
+                    break
             # if _ % 5 == 0:
             #     show_segmentation(image, labels, K)
         return labels
@@ -268,4 +276,5 @@ class Alpha_expansion2:
                 pixel_index = i * w + j
                 if graph.get_segment(nodes[pixel_index]) == 1:
                     nv_labels[i, j] = alpha
+                    self.node_changed=True
         return nv_labels
