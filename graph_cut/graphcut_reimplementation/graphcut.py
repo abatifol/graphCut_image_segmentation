@@ -55,7 +55,8 @@ class GraphCut:
             s = sink
             while s != source:
                 path_flow = min(
-                    path_flow, self.capacity[parent[s]][s] - self.flow[parent[s]][s])
+                    path_flow, self.capacity[parent[s]][s] - self.flow[parent[s]][s]
+                )
                 s = parent[s]
 
             v = sink
@@ -68,7 +69,6 @@ class GraphCut:
             max_flow += path_flow
 
         return max_flow
-    
 
     # first call ford_fulkerson to find max flow and then call min_cut with the new flow to find the partition
     def min_cut(self, source):
@@ -93,8 +93,7 @@ class GraphCut:
         for u in range(self.num_nodes):
             for v in self.adj_list[u]:
                 if self.capacity[u][v] > 0:
-                    G.add_edge(
-                        u, v, capacity=self.capacity[u][v], flow=self.flow[u][v])
+                    G.add_edge(u, v, capacity=self.capacity[u][v], flow=self.flow[u][v])
 
         # Compute min cut
         min_cut_nodes = self.min_cut(source)
@@ -109,23 +108,31 @@ class GraphCut:
         # Draw the graph
         pos = nx.spring_layout(G)
         # Color nodes based on partition
-        node_colors = ['lightblue' if min_cut_nodes[v]
-                       else 'lightgreen' for v in G.nodes()]
-        nx.draw(G, pos, with_labels=True, node_color=node_colors,
-                node_size=500, font_size=10)
+        node_colors = [
+            "lightblue" if min_cut_nodes[v] else "lightgreen" for v in G.nodes()
+        ]
+        nx.draw(
+            G,
+            pos,
+            with_labels=True,
+            node_color=node_colors,
+            node_size=500,
+            font_size=10,
+        )
 
         # Highlight frontier edges
-        nx.draw_networkx_edges(
-            G, pos, edgelist=frontier_edges, edge_color='r', width=2)
+        nx.draw_networkx_edges(G, pos, edgelist=frontier_edges, edge_color="r", width=2)
 
         # Create edge labels with flow/capacity
         edge_labels = {
-            (u, v): f"{G[u][v]['flow']:.1f}/{G[u][v]['capacity']:.1f}" for u, v in G.edges()}
+            (u, v): f"{G[u][v]['flow']:.1f}/{G[u][v]['capacity']:.1f}"
+            for u, v in G.edges()
+        }
         nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
 
         # Create legend
-        source_patch = mpatches.Patch(color='lightblue', label='Source Side')
-        sink_patch = mpatches.Patch(color='lightgreen', label='Sink Side')
+        source_patch = mpatches.Patch(color="lightblue", label="Source Side")
+        sink_patch = mpatches.Patch(color="lightgreen", label="Sink Side")
         plt.legend(handles=[source_patch, sink_patch], title="Partitions")
 
         plt.title("Graph with Minimum Cut Frontier Highlighted")

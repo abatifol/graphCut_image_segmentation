@@ -7,18 +7,22 @@ from typing import List
 
 from typing import Union, Tuple, List, Dict
 
+
 def resize_mask_and_img(mask, img, scale_factor=0.5):
     w, h, _ = img.shape
     new_w, new_h = int(w * scale_factor), int(h * scale_factor)
-    resized_mask = cv2.resize(mask, (new_w, new_h),
-                              interpolation=cv2.INTER_LANCZOS4)
-    resized_img = cv2.resize(
-        img, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+    resized_mask = cv2.resize(mask, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
+    resized_img = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_LANCZOS4)
     return resized_mask, resized_img
 
 
 class SegmentationDataset:
-    def __init__(self, classes: List[str] = ["sheep", "cow", "elephant"], nb_samples: int = 25, resize_factor=0.5):
+    def __init__(
+        self,
+        classes: List[str] = ["sheep", "cow", "elephant"],
+        nb_samples: int = 25,
+        resize_factor=0.5,
+    ):
         self.classes = classes
         self.dataset = foz.load_zoo_dataset(
             "coco-2017",
@@ -38,17 +42,19 @@ class SegmentationDataset:
     def prepare_dataset(self):
         for sample in self.dataset.iter_samples():
             # Load image and convert to RGB
-            
+
             img = cv2.cvtColor(cv2.imread(sample.filepath), cv2.COLOR_BGR2RGB)
 
             # Extract labels and annotations and define unique colors if it does not exist already
-            labels = sorted(set([d['label']
-                            for d in sample.ground_truth['detections']]))
+            labels = sorted(
+                set([d["label"] for d in sample.ground_truth["detections"]])
+            )
             annotations = sample.ground_truth["detections"]
             for label in labels:
                 if label not in self.LABEL_COLORS:
                     self.LABEL_COLORS[label] = np.random.randint(
-                        0, 255, (3,), dtype=np.uint8)
+                        0, 255, (3,), dtype=np.uint8
+                    )
 
             # Initialize blank mask
             h, w, _ = img.shape
@@ -65,10 +71,10 @@ class SegmentationDataset:
                 y_2 = y_1 + floor(bb_height * h)
 
                 # Get segmentation mask and assign color
-                annotation_mask = np.array(
-                    annotation["mask"], dtype=np.uint8).T
+                annotation_mask = np.array(annotation["mask"], dtype=np.uint8).T
                 annotation_mask = np.moveaxis(
-                    annotation_mask[:, :, np.newaxis].repeat(3, axis=2), 0, 1)
+                    annotation_mask[:, :, np.newaxis].repeat(3, axis=2), 0, 1
+                )
                 mask_color = self.LABEL_COLORS[annotation["label"]]
                 colored_mask = annotation_mask * mask_color
 
@@ -81,19 +87,26 @@ class SegmentationDataset:
 
                 # Resize colored_mask to match mask_region
                 colored_mask_resized = cv2.resize(
-                    colored_mask, (mask_region_width, mask_region_height), interpolation=cv2.INTER_NEAREST)
+                    colored_mask,
+                    (mask_region_width, mask_region_height),
+                    interpolation=cv2.INTER_NEAREST,
+                )
 
                 # Resize mask_nonzero to match mask_region's height and width
-                mask_nonzero_resized = cv2.resize(mask_nonzero.astype(
-                    np.uint8), (mask_region_width, mask_region_height), interpolation=cv2.INTER_NEAREST).astype(bool)
+                mask_nonzero_resized = cv2.resize(
+                    mask_nonzero.astype(np.uint8),
+                    (mask_region_width, mask_region_height),
+                    interpolation=cv2.INTER_NEAREST,
+                ).astype(bool)
 
-                mask_region[mask_nonzero_resized] = colored_mask_resized[mask_nonzero_resized]
+                mask_region[mask_nonzero_resized] = colored_mask_resized[
+                    mask_nonzero_resized
+                ]
 
             mask[y_1:y_2, x_1:x_2, :] = mask_region
 
             # resize the image
-            mask, img = resize_mask_and_img(
-                mask, img, scale_factor=self.resize_factor)
+            mask, img = resize_mask_and_img(mask, img, scale_factor=self.resize_factor)
 
             self.images.append(img)
             self.masks.append(mask)
@@ -101,8 +114,9 @@ class SegmentationDataset:
 
     def __len__(self):
         return len(self.dataset)
+
     def get_segmentation_mask(
-        self, image: np.ndarray, annotations: List[Dict], n_labels: int,COLORS
+        self, image: np.ndarray, annotations: List[Dict], n_labels: int, COLORS
     ) -> np.ndarray:
         """
 
