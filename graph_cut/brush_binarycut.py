@@ -116,7 +116,7 @@ class BinaryGraphCut:
         for index in range(len(self.nodes)):
             if g.get_segment(index) == 1:
                 x, y = index % width, index // width
-                self.segment_overlay[y, x] = (255, 0, 255)
+                self.segment_overlay[y, x] = self.image[y, x] #(255, 0, 255)
                 self.mask[y, x] = True
 
 class BrushCut:
@@ -139,7 +139,10 @@ class BrushCut:
                 overlay = self.graphcut.seed_overlay
             else:
                 overlay = self.graphcut.segment_overlay
-            cv2.imshow(window_name, cv2.addWeighted(self.base_image, 0.9, overlay, 0.4, 0.1))
+            display_image = overlay if self.graphcut.current_overlay == self.graphcut.SEGMENTED else \
+                    cv2.addWeighted(self.base_image, 0.9, overlay, 0.6, 0.1)
+            cv2.imshow(window_name, display_image)
+            # cv2.imshow(window_name, cv2.addWeighted(self.base_image, 0.9, overlay, 0.6, 0.1))
             key = cv2.waitKey(20) & 0xFF
             if key == 27:  # Esc to exit
                 break
@@ -157,6 +160,7 @@ class BrushCut:
 
             # clear seeds
             elif key == ord('c'):
+                self.graphcut.current_overlay = self.graphcut.SEEDS
                 self.graphcut.reset_seeds()
         cv2.destroyAllWindows()
 
@@ -170,5 +174,5 @@ class BrushCut:
             self.graphcut.add_seed(x, y, self.mode)
 
 if __name__ == '__main__':
-    brushcut = BrushCut("images/koala.jpg")
+    brushcut = BrushCut("images/flower.jpg")
     brushcut.run()

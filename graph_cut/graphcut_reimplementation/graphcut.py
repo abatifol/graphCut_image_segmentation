@@ -47,6 +47,8 @@ class GraphCut:
         return False
 
     def ford_fulkerson(self, source, sink):
+        self.source = source
+        self.sink = sink
         parent = np.full(self.num_nodes, -1, dtype=int)
         max_flow = 0
 
@@ -106,7 +108,7 @@ class GraphCut:
                     frontier_edges.append((u, v))
 
         # Draw the graph
-        pos = nx.spring_layout(G)
+        pos = nx.circular_layout(G)
         # Color nodes based on partition
         node_colors = [
             "lightblue" if min_cut_nodes[v] else "lightgreen" for v in G.nodes()
@@ -137,3 +139,14 @@ class GraphCut:
 
         plt.title("Graph with Minimum Cut Frontier Highlighted")
         plt.show()
+    
+    def get_segment(self, node):
+        ## return 0 if the node belogs to the source partition and 1 if it belongs to the sink partition
+        if not self.source or not self.sink:
+            raise ValueError("Call ford_fulkerson before get_segment")
+        visited = self.min_cut(self.source)
+        if visited[node]:
+            return 0
+        else:
+            return 1
+
