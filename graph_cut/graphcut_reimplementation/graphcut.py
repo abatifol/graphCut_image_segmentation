@@ -14,6 +14,8 @@ class GraphCut:
         self.flow = defaultdict(dict)
         # adj_list[u] is a list of neighbors of node u
         self.adj_list = defaultdict(list)
+        self.source = None
+        self.sink = None
 
     def add_node(self):
         node = self.num_nodes
@@ -22,22 +24,23 @@ class GraphCut:
         return node
 
     def add_edge(self, u, v, w):
-        self.capacity[u][v] = w
-        self.flow[u][v] = 0
-        self.adj_list[u].append(v)
-        # Add reverse edge with capacity 0 for residual graph
-        self.capacity[v][u] = 0
-        self.flow[v][u] = 0
-        self.adj_list[v].append(u)
+        if v not in self.adj_list[u]:
+            self.capacity[u][v] = w
+            self.flow[u][v] = 0
+            self.adj_list[u].append(v)
+
+        if u not in self.adj_list[v]:
+            self.capacity[v][u] = 0  # Ensure reverse edge has zero capacity
+            self.flow[v][u] = 0
+            self.adj_list[v].append(u)
 
     def bfs(self, source, sink, parent):
         visited = np.zeros(self.num_nodes, dtype=bool)
         queue = deque([source])  # use deque for more efficiency
         visited[source] = True
-
         while queue:
             u = queue.popleft()
-            for v in self.adj_list[u]:
+            for v in set(self.adj_list[u]):
                 if not visited[v] and self.capacity[u][v] - self.flow[u][v] > 0:
                     queue.append(v)
                     visited[v] = True
@@ -51,7 +54,6 @@ class GraphCut:
         self.sink = sink
         parent = np.full(self.num_nodes, -1, dtype=int)
         max_flow = 0
-
         while self.bfs(source, sink, parent):
             path_flow = np.inf
             s = sink
