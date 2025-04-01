@@ -75,8 +75,16 @@ graphCut_image_segmentation/
 
 ## ✨ Results 
 
-**Interactive multi-label segmentation results**
-![Segmentation Example](results/multicut.png)
+
+**Interactive multi-label segmentation results**\
+![Segmentation Example](results/multicut.png)\
+
+
+
+**Alpha Expansion results** 
+
+![Alpha-Expansion results](images/Alpha_exp.png)
+
 
 
 ## 📌 Installation  
