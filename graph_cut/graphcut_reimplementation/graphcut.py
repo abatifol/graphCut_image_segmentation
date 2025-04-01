@@ -14,6 +14,8 @@ class GraphCut:
         self.flow = defaultdict(dict)
         # adj_list[u] is a list of neighbors of node u
         self.adj_list = defaultdict(list)
+        self.source = None
+        self.sink = None
 
     def add_node(self):
         node = self.num_nodes
@@ -22,22 +24,23 @@ class GraphCut:
         return node
 
     def add_edge(self, u, v, w):
-        self.capacity[u][v] = w
-        self.flow[u][v] = 0
-        self.adj_list[u].append(v)
-        # Add reverse edge with capacity 0 for residual graph
-        self.capacity[v][u] = 0
-        self.flow[v][u] = 0
-        self.adj_list[v].append(u)
+        if v not in self.adj_list[u]:
+            self.capacity[u][v] = w
+            self.flow[u][v] = 0
+            self.adj_list[u].append(v)
+
+        if u not in self.adj_list[v]:
+            self.capacity[v][u] = 0  # Ensure reverse edge has zero capacity
+            self.flow[v][u] = 0
+            self.adj_list[v].append(u)
 
     def bfs(self, source, sink, parent):
         visited = np.zeros(self.num_nodes, dtype=bool)
         queue = deque([source])  # use deque for more efficiency
         visited[source] = True
-
         while queue:
             u = queue.popleft()
-            for v in self.adj_list[u]:
+            for v in set(self.adj_list[u]):
                 if not visited[v] and self.capacity[u][v] - self.flow[u][v] > 0:
                     queue.append(v)
                     visited[v] = True
@@ -47,9 +50,10 @@ class GraphCut:
         return False
 
     def ford_fulkerson(self, source, sink):
+        self.source = source
+        self.sink = sink
         parent = np.full(self.num_nodes, -1, dtype=int)
         max_flow = 0
-
         while self.bfs(source, sink, parent):
             path_flow = np.inf
             s = sink
@@ -106,7 +110,7 @@ class GraphCut:
                     frontier_edges.append((u, v))
 
         # Draw the graph
-        pos = nx.spring_layout(G)
+        pos = nx.circular_layout(G)
         # Color nodes based on partition
         node_colors = [
             "lightblue" if min_cut_nodes[v] else "lightgreen" for v in G.nodes()
@@ -137,3 +141,14 @@ class GraphCut:
 
         plt.title("Graph with Minimum Cut Frontier Highlighted")
         plt.show()
+    
+    def get_segment(self, node):
+        ## return 0 if the node belogs to the source partition and 1 if it belongs to the sink partition
+        if not self.source or not self.sink:
+            raise ValueError("Call ford_fulkerson before get_segment")
+        visited = self.min_cut(self.source)
+        if visited[node]:
+            return 0
+        else:
+            return 1
+
