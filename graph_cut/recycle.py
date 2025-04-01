@@ -7,8 +7,11 @@ from sklearn.cluster import KMeans
 import maxflow
 
 
+from graph_cut.display import show_segmentation
+from graph_cut.base_algorithm import Runner
+
+
 def unary_recycle(unary, label, K):
-    #! CHATGPT
     """Constructs a new unary term for the recycle algorithm."""
     W, H, k = unary.shape
     unary_term = np.zeros((W, H, 2))
@@ -40,19 +43,11 @@ def binary_recycle(pairwise_term, K):
     return pairwise_term_recycled
 
 
-from graph_cut.display import show_segmentation
-from graph_cut.base_algorithm import Runner
-
 class Recycle(Runner):
     # to remove the self.assigned labels , just remove the if condition in the construct graph
     def __init__(self, image, unary, pairwise, K):
         super(Recycle, self).__init__(image, unary, pairwise, K)
-        # self.l_energy=[]
-   
-
         self.cst = 0  #! Cstant term in the energy
-        # labels = np.argmin(unary, axis=2)  # Initialize labels using unary term
-        # labels = initialize_labels_bis(image,method=method, K=K)
 
     def construct_graph(self, assigned_labels):
         graph = maxflow.Graph[float]()
@@ -104,9 +99,9 @@ class Recycle(Runner):
                         )
         return graph, nodes
 
-    def run(self, image, init_labels=None,assigned_labels=None):
+    def run(self, image, init_labels=None, assigned_labels=None):
         # init_labels is the initial labels for the image
-        
+
         h, w, _ = image.shape
         print("---start Projection---")
         # Unary/pairwise of the true graph
@@ -124,12 +119,12 @@ class Recycle(Runner):
 
         # project to int
         labels = labels.astype(np.int32)
-        show_segmentation(image, labels, title="initialization of the Recycle algorithm")
-        # energy=compute_energy(labels,unary,pairwise)
+        show_segmentation(
+            image, labels, title="initialization of the Recycle algorithm"
+        )
         assigned_labels = (
             self.assigned_labels
         )  # Will be True iif the pixel is assigned to a label and will not move
-        # print("first energy",compute_energy(labels,unary,pairwise))
         for alpha in range(K):
             print("alpha", alpha)
 
@@ -153,13 +148,12 @@ class Recycle(Runner):
             show_segmentation(image, labels, K, title=f" Projection: alpha {alpha}")
 
         return labels, assigned_labels, self.cst, unary, pairwise
-        # if _ % 5 == 0:
-        #     show_segmentation(image, labels, K)
 
     def project(self, labels, assigned_labels, unary_term, pairwise_term):
-       return super(Recycle, self).project(
+        return super(Recycle, self).project(
             labels, assigned_labels, unary_term, pairwise_term
         )
+
     def update_labels(self, graph, nodes, alpha, labels, assigned_labels):
         h, w = self.h, self.w
         nv_labels = labels.copy()
@@ -167,7 +161,6 @@ class Recycle(Runner):
             for j in range(w):
                 pixel_index = i * w + j
                 if graph.get_segment(nodes[pixel_index]) == 1:  #!
-                    # print("updated label",i,j,alpha)
                     nv_labels[i, j] = alpha
                     if assigned_labels[i, j] == self.epsilon:
                         assigned_labels[i, j] = 1
