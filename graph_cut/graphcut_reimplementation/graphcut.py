@@ -141,7 +141,7 @@ class GraphCut:
 
         plt.title("Graph with Minimum Cut Frontier Highlighted")
         plt.show()
-    
+
     def get_segment(self, node):
         ## return 0 if the node belogs to the source partition and 1 if it belongs to the sink partition
         if not self.source or not self.sink:
@@ -151,4 +151,3 @@ class GraphCut:
             return 0
         else:
             return 1
-

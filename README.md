@@ -2,7 +2,7 @@
 
 
 # 📌 Description
-This is an repository that try to reproduce the Paper: "". 
+This is an repository that try to reproduce the Paper: "Dynamic Hybrid Algorithms for MAP Inference in  Discrete MRFs". 
 
 We used it for a class project, we added the report [here](https://github.com/gardiens/Noise2NoiseMapping_pytorch/blob/main/Report-Noise2Mapping.pdf) 
 
@@ -17,7 +17,7 @@ pip install -r requirements.txt
 ```
 
 # 🚀 Usage
-
+We provided notebooks to run specific parts of the files. see the folder notebook for more details
 
 # Repository structure
 The repository is structured as follows. Each point is detailed below.

@@ -4,6 +4,7 @@ import maxflow
 from typing import Tuple, List
 import os
 
+
 class BinaryGraphCut:
     # Constants for seed types
     FOREGROUND = 1
@@ -23,8 +24,8 @@ class BinaryGraphCut:
         self.segment_overlay = np.zeros_like(self.image)
         self.mask = None
 
-        self.background_seeds: List[Tuple[int,int]] = []
-        self.foreground_seeds: List[Tuple[int,int]] = []
+        self.background_seeds: List[Tuple[int, int]] = []
+        self.foreground_seeds: List[Tuple[int, int]] = []
         self.nodes = []
         self.edges = []
         self.current_overlay = self.SEEDS
@@ -35,10 +36,14 @@ class BinaryGraphCut:
         coord = (x, y)
         if seed_type == self.BACKGROUND and coord not in self.background_seeds:
             self.background_seeds.append(coord)
-            cv2.rectangle(self.seed_overlay, (x-2, y-2), (x+2, y+2), (0, 0, 255), -1)
+            cv2.rectangle(
+                self.seed_overlay, (x - 2, y - 2), (x + 2, y + 2), (0, 0, 255), -1
+            )
         elif seed_type == self.FOREGROUND and coord not in self.foreground_seeds:
             self.foreground_seeds.append(coord)
-            cv2.rectangle(self.seed_overlay, (x-2, y-2), (x+2, y+2), (0, 255, 0), -1)
+            cv2.rectangle(
+                self.seed_overlay, (x - 2, y - 2), (x + 2, y + 2), (0, 255, 0), -1
+            )
 
     def reset_seeds(self):
         self.background_seeds = []
@@ -47,17 +52,25 @@ class BinaryGraphCut:
 
     def get_node_index(self, x: int, y: int, width: int) -> int:
         return y * width + x
-    
+
     def pairwise_cost(self, pixel1, pixel2):
-        x1,y1 = pixel1
-        x2,y2 = pixel2
+        x1, y1 = pixel1
+        x2, y2 = pixel2
         # sigma = 10.0
         # diff = np.linalg.norm(self.image[y1, x1].astype(np.float32) - self.image[y2, x2].astype(np.float32))  # Euclidean distance
         # weight = np.exp(-diff**2 / (2 * sigma**2))  # Gaussian function
         # return weight
-        return 1.0 / (1 + np.sum((self.image[y1, x1].astype(np.float32) - self.image[y2, x2].astype(np.float32))**2))
+        return 1.0 / (
+            1
+            + np.sum(
+                (
+                    self.image[y1, x1].astype(np.float32)
+                    - self.image[y2, x2].astype(np.float32)
+                )
+                ** 2
+            )
+        )
 
-    
     def create_graph(self):
         if not self.background_seeds or not self.foreground_seeds:
             print("Please enter at least one foreground and background seed.")
@@ -66,12 +79,12 @@ class BinaryGraphCut:
         # Initialize graph to default value and update seed pixels
         self.graph = np.full(self.image.shape[:2], self.DEFAULT_VAL, dtype=np.float32)
         for x, y in self.background_seeds:
-            x = min(max(x, 0), self.image.shape[1]-1)
-            y = min(max(y, 0), self.image.shape[0]-1)
+            x = min(max(x, 0), self.image.shape[1] - 1)
+            y = min(max(y, 0), self.image.shape[0] - 1)
             self.graph[y, x] = 0.0
         for x, y in self.foreground_seeds:
-            x = min(max(x, 0), self.image.shape[1]-1)
-            y = min(max(y, 0), self.image.shape[0]-1)
+            x = min(max(x, 0), self.image.shape[1] - 1)
+            y = min(max(y, 0), self.image.shape[0] - 1)
             self.graph[y, x] = 1.0
 
         self.nodes = []
@@ -95,13 +108,17 @@ class BinaryGraphCut:
             for x in range(width):
                 if x < width - 1:
                     node1 = self.get_node_index(x, y, width)
-                    node2 = self.get_node_index(x+1, y, width)
-                    self.edges.append((node1, node2, self.pairwise_cost((x, y), (x+1, y))))
+                    node2 = self.get_node_index(x + 1, y, width)
+                    self.edges.append(
+                        (node1, node2, self.pairwise_cost((x, y), (x + 1, y)))
+                    )
                 if y < height - 1:
                     node1 = self.get_node_index(x, y, width)
-                    node2 = self.get_node_index(x, y+1, width)
-                    self.edges.append((node1, node2, self.pairwise_cost((x, y), (x, y+1))))
-    
+                    node2 = self.get_node_index(x, y + 1, width)
+                    self.edges.append(
+                        (node1, node2, self.pairwise_cost((x, y), (x, y + 1)))
+                    )
+
     def cut_graph(self):
         height, width = self.image.shape[:2]
         self.segment_overlay = np.zeros_like(self.image)
@@ -116,31 +133,37 @@ class BinaryGraphCut:
         for index in range(len(self.nodes)):
             if g.get_segment(index) == 1:
                 x, y = index % width, index // width
-                self.segment_overlay[y, x] = self.image[y, x] #(255, 0, 255)
+                self.segment_overlay[y, x] = self.image[y, x]  # (255, 0, 255)
                 self.mask[y, x] = True
+
 
 class BrushCut:
     def __init__(self, filename: str):
         if not os.path.exists(filename):
             raise ValueError("Image File not found.")
-        
+
         self.graphcut = BinaryGraphCut(filename)
         self.base_image = self.graphcut.image.copy()
         self.mode = self.graphcut.FOREGROUND
         self.started_click = False
 
     def run(self):
-        window_name = 'Binary Segmentation with graph cut'
+        window_name = "Binary Segmentation with graph cut"
         cv2.namedWindow(window_name)
         cv2.setMouseCallback(window_name, self.handle_users_seed)
-        print("Press 'c' to clear seeds, 'g' to segment, 't' to toggle between label, 'Esc' to exit.")
+        print(
+            "Press 'c' to clear seeds, 'g' to segment, 't' to toggle between label, 'Esc' to exit."
+        )
         while True:
             if self.graphcut.current_overlay == self.graphcut.SEEDS:
                 overlay = self.graphcut.seed_overlay
             else:
                 overlay = self.graphcut.segment_overlay
-            display_image = overlay if self.graphcut.current_overlay == self.graphcut.SEGMENTED else \
-                    cv2.addWeighted(self.base_image, 0.9, overlay, 0.6, 0.1)
+            display_image = (
+                overlay
+                if self.graphcut.current_overlay == self.graphcut.SEGMENTED
+                else cv2.addWeighted(self.base_image, 0.9, overlay, 0.6, 0.1)
+            )
             cv2.imshow(window_name, display_image)
             # cv2.imshow(window_name, cv2.addWeighted(self.base_image, 0.9, overlay, 0.6, 0.1))
             key = cv2.waitKey(20) & 0xFF
@@ -148,18 +171,18 @@ class BrushCut:
                 break
 
             # switch between foreground and background
-            elif key == ord('t'):
+            elif key == ord("t"):
                 self.mode = 1 - self.mode
                 self.graphcut.current_overlay = self.graphcut.SEEDS
 
             # segment the image
-            elif key == ord('g'):
+            elif key == ord("g"):
                 self.graphcut.create_graph()
                 self.graphcut.cut_graph()
                 self.graphcut.current_overlay = self.graphcut.SEGMENTED
 
             # clear seeds
-            elif key == ord('c'):
+            elif key == ord("c"):
                 self.graphcut.current_overlay = self.graphcut.SEEDS
                 self.graphcut.reset_seeds()
         cv2.destroyAllWindows()
@@ -173,6 +196,7 @@ class BrushCut:
         elif event == cv2.EVENT_MOUSEMOVE and self.started_click:
             self.graphcut.add_seed(x, y, self.mode)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     brushcut = BrushCut("images/flower.jpg")
     brushcut.run()

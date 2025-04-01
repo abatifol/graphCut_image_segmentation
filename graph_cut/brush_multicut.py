@@ -21,7 +21,9 @@ class MultiLabelGraphCut:
         self.mask = np.full(self.image.shape[:2], -1, dtype=np.int32)
 
         self.labels = list(range(1, num_labels + 1))
-        self.seed_points: Dict[int, List[Tuple[int, int]]] = {label: [] for label in self.labels}
+        self.seed_points: Dict[int, List[Tuple[int, int]]] = {
+            label: [] for label in self.labels
+        }
         self.current_overlay = self.SEEDS
         self.current_label = 1
 
@@ -41,7 +43,7 @@ class MultiLabelGraphCut:
         if coord not in self.seed_points[label]:
             self.seed_points[label].append(coord)
             color = self.label_colors.get(label, (255, 255, 255))
-            cv2.rectangle(self.seed_overlay, (x-2, y-2), (x+2, y+2), color, -1)
+            cv2.rectangle(self.seed_overlay, (x - 2, y - 2), (x + 2, y + 2), color, -1)
             self.mask[y, x] = label
 
     def reset_seeds(self):
@@ -58,35 +60,56 @@ class MultiLabelGraphCut:
     #     x2, y2 = pixel2
     #     color_diff = np.linalg.norm(self.image[y1, x1] - self.image[y2, x2])
     #     return np.exp(-color_diff / 10.0)  # Reduce smoothness penalty for similar colors
-    
+
     def unary_cost(self, x: int, y: int, label: int):
         """Unary term based on color similarity to label seeds"""
-        if not self.seed_points[label]:  
+        if not self.seed_points[label]:
             # No seeds for this label, assign based on closest mean seed color
-            mean_colors = {lbl: self.get_mean_seed_color(lbl) for lbl in self.labels if self.seed_points[lbl]}
+            mean_colors = {
+                lbl: self.get_mean_seed_color(lbl)
+                for lbl in self.labels
+                if self.seed_points[lbl]
+            }
             if not mean_colors:  # No labels have seeds, return uniform cost
-                return 1000  
+                return 1000
 
             # Assign pixel to the closest mean color
             pixel_color = self.image[y, x]
-            closest_label = min(mean_colors, key=lambda lbl: np.linalg.norm(pixel_color - mean_colors[lbl]))
-            return np.linalg.norm(pixel_color - mean_colors[closest_label]) ** 2 / 100  
+            closest_label = min(
+                mean_colors,
+                key=lambda lbl: np.linalg.norm(pixel_color - mean_colors[lbl]),
+            )
+            return np.linalg.norm(pixel_color - mean_colors[closest_label]) ** 2 / 100
 
         # Regular unary cost
-        color_dist = np.linalg.norm(self.image[y, x] - np.mean([self.image[py, px] for px, py in self.seed_points[label]], axis=0))
-        return min(1e6, (color_dist ** 2) / 100)  
+        color_dist = np.linalg.norm(
+            self.image[y, x]
+            - np.mean(
+                [self.image[py, px] for px, py in self.seed_points[label]], axis=0
+            )
+        )
+        return min(1e6, (color_dist**2) / 100)
 
     def pairwise_cost(self, pixel1, pixel2):
-        """ Compute a smoothness constraint based on color similarity """
+        """Compute a smoothness constraint based on color similarity"""
         x1, y1 = pixel1
         x2, y2 = pixel2
-        return 1.0 / (1 + np.sum((self.image[y1, x1].astype(np.float32) - self.image[y2, x2].astype(np.float32))**2))
-        
+        return 1.0 / (
+            1
+            + np.sum(
+                (
+                    self.image[y1, x1].astype(np.float32)
+                    - self.image[y2, x2].astype(np.float32)
+                )
+                ** 2
+            )
+        )
+
         # works worse
         # return np.exp(-np.linalg.norm(self.image[y1, x1] - self.image[y2, x2]) / 50.0)
 
     def alpha_expansion(self):
-        """ Perform multi-label segmentation using alpha expansion """
+        """Perform multi-label segmentation using alpha expansion"""
         print("Performing Alpha Expansion...")
         height, width = self.image.shape[:2]
 
@@ -98,23 +121,31 @@ class MultiLabelGraphCut:
             for i in range(height):
                 for j in range(width):
                     pixel_index = i * width + j
-                    if self.mask[i,j] == alpha:
+                    if self.mask[i, j] == alpha:
                         g.add_tedge(node_ids[pixel_index], 1e9, 0)  # Hard constraint
-                    elif self.mask[i,j] > 0:
-                        g.add_tedge(node_ids[pixel_index], 0,1e9)    
+                    elif self.mask[i, j] > 0:
+                        g.add_tedge(node_ids[pixel_index], 0, 1e9)
 
-            # Add pairwise edges (smoothness term)
+                    # Add pairwise edges (smoothness term)
                     if i < height - 1:
                         neighbor_index_down = pixel_index + width
-                        weight_down = self.pairwise_cost((j, i), (j, i+1))
-                        g.add_edge(node_ids[pixel_index], node_ids[neighbor_index_down], weight_down, weight_down)
-                    
+                        weight_down = self.pairwise_cost((j, i), (j, i + 1))
+                        g.add_edge(
+                            node_ids[pixel_index],
+                            node_ids[neighbor_index_down],
+                            weight_down,
+                            weight_down,
+                        )
+
                     if j < width - 1:
                         neighbor_index_right = pixel_index + 1
-                        weight = self.pairwise_cost((j, i), (j+1, i))
-                        g.add_edge(node_ids[pixel_index], node_ids[neighbor_index_right], weight, weight)
-
-
+                        weight = self.pairwise_cost((j, i), (j + 1, i))
+                        g.add_edge(
+                            node_ids[pixel_index],
+                            node_ids[neighbor_index_right],
+                            weight,
+                            weight,
+                        )
 
                     # weight_x = self.pairwise_cost((x, y), (x + 1, y))
                     # weight_y = self.pairwise_cost((x, y), (x, y + 1))
@@ -124,16 +155,20 @@ class MultiLabelGraphCut:
             g.maxflow()
 
             for i in range(height):
-                    for j in range(width):
-                        if g.get_segment(node_ids[i * width + j]) == 0:  # Belongs to 'alpha'
-                            self.mask[i, j] = alpha
+                for j in range(width):
+                    if (
+                        g.get_segment(node_ids[i * width + j]) == 0
+                    ):  # Belongs to 'alpha'
+                        self.mask[i, j] = alpha
 
         # Apply segmentation result
         self.segment_overlay.fill(0)
         for y in range(height):
             for x in range(width):
                 if self.mask[y, x] > 0:
-                    self.segment_overlay[y, x] = self.label_colors.get(self.mask[y, x], (255, 255, 255))
+                    self.segment_overlay[y, x] = self.label_colors.get(
+                        self.mask[y, x], (255, 255, 255)
+                    )
 
 
 class BrushCut:
@@ -147,11 +182,13 @@ class BrushCut:
         self.started_click = False
 
     def run(self):
-        window_name = 'Multi-Label Segmentation with Graph Cut'
+        window_name = "Multi-Label Segmentation with Graph Cut"
         cv2.namedWindow(window_name)
         cv2.setMouseCallback(window_name, self.handle_users_seed)
 
-        print("Press 'c' to clear seeds, 'g' to segment, '1-5' to change label, 'Esc' to exit.")
+        print(
+            "Press 'c' to clear seeds, 'g' to segment, '1-5' to change label, 'Esc' to exit."
+        )
 
         while True:
             if self.graphcut.current_overlay == self.graphcut.SEEDS:
@@ -166,15 +203,15 @@ class BrushCut:
             if key == 27:  # Esc key
                 break
 
-            elif ord('1') <= key <= ord('5'):
+            elif ord("1") <= key <= ord("5"):
                 self.mode = int(chr(key))
                 print(f"Switched to label {self.mode}")
 
-            elif key == ord('g'):
+            elif key == ord("g"):
                 self.graphcut.alpha_expansion()
                 self.graphcut.current_overlay = self.graphcut.SEGMENTED
 
-            elif key == ord('c'):
+            elif key == ord("c"):
                 self.graphcut.reset_seeds()
                 self.graphcut.current_overlay = self.graphcut.SEEDS
 
@@ -192,6 +229,6 @@ class BrushCut:
             self.graphcut.add_seed(x, y, self.mode)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     brushcut = BrushCut("images/cow.ppm", num_labels=4)
     brushcut.run()
