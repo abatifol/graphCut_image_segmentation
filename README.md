@@ -6,6 +6,7 @@ This repository contains implementations of **GraphCut-based image segmentation*
 > *Karteek Alahari, Pushmeet Kohli, and Philip H. S. Torr*  
 
 This project was developed as part of the *Graphical Models* class at **CentraleSupélec/MVA 2025**.  
+You can find our [report here](https://github.com/abatifol/graphCut_image_segmentation/blob/main/GRM_project_report.pdf)
 
 **Authors**: *Pierrick Bournez, Antonine Batifol*  
 
